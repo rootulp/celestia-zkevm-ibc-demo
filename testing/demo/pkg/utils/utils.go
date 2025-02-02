@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
 	"cosmossdk.io/x/tx/signing"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -19,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	legacysigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -84,7 +84,7 @@ func SetupClientContext() (client.Context, error) {
 	}
 
 	txConfigOpts := authtx.ConfigOptions{
-		EnabledSignModes:           append(authtx.DefaultSignModes, legacysigning.SignMode_SIGN_MODE_TEXTUAL),
+		EnabledSignModes:           append(authtx.DefaultSignModes, signingv1beta1.SignMode_SIGN_MODE_TEXTUAL),
 		TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(conn),
 	}
 
@@ -139,7 +139,7 @@ func defaultTxFactory(clientCtx client.Context, account client.Account) tx.Facto
 	return tx.Factory{}.
 		WithAccountNumber(account.GetAccountNumber()).
 		WithSequence(account.GetSequence()).
-		WithSignMode(legacysigning.SignMode_SIGN_MODE_DIRECT).
+		WithSignMode(signingv1beta1.SignMode_SIGN_MODE_DIRECT).
 		WithGas(flags.DefaultGasLimit).
 		WithGasPrices("0.0001stake").
 		WithMemo("interchaintest").
