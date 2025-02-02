@@ -1,7 +1,7 @@
 package simapp
 
 import (
-	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/core/store"
 	circuittypes "cosmossdk.io/x/circuit/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
@@ -59,7 +59,7 @@ func (app *SimApp) registerUpgradeHandlers() {
 	}
 
 	if upgradeInfo.Name == upgrades.V7 && !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
+		storeUpgrades := store.StoreUpgrades{
 			Added: []string{
 				consensusparamtypes.StoreKey,
 			},
@@ -70,7 +70,7 @@ func (app *SimApp) registerUpgradeHandlers() {
 	}
 
 	if upgradeInfo.Name == upgrades.V8 && !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
+		storeUpgrades := store.StoreUpgrades{
 			Added: []string{
 				circuittypes.ModuleName,
 			},

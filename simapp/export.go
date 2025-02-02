@@ -7,7 +7,6 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 
-	slashingtypes "cosmossdk.io/x/slashing/types"
 	"cosmossdk.io/x/staking"
 	stakingtypes "cosmossdk.io/x/staking/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -30,7 +29,7 @@ func (app *SimApp) ExportAppStateAndValidators(
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 
-	genState, err := app.ModuleManager.ExportGenesis(ctx, app.appCodec)
+	genState, err := app.ModuleManager.ExportGenesis(ctx)
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
@@ -69,13 +68,10 @@ func (app *SimApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []
 		allowedAddrsMap[addr] = true
 	}
 
-	/* Just to be safe, assert the invariants on current state. */
-	app.CrisisKeeper.AssertInvariants(ctx)
-
 	/* Handle fee distribution state. */
 
 	// withdraw all validator commission
-	err := app.StakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
+	err := app.StakingKeeper.IterateValidators(ctx, func(_ int64, val sdk.ValidatorI) (stop bool) {
 		valBz, err := app.StakingKeeper.ValidatorAddressCodec().StringToBytes(val.GetOperator())
 		if err != nil {
 			panic(err)
@@ -106,18 +102,12 @@ func (app *SimApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []
 		_, _ = app.DistrKeeper.WithdrawDelegationRewards(ctx, delAddr, valAddr)
 	}
 
-	// clear validator slash events
-	app.DistrKeeper.DeleteAllValidatorSlashEvents(ctx)
-
-	// clear validator historical rewards
-	app.DistrKeeper.DeleteAllValidatorHistoricalRewards(ctx)
-
 	// set context height to zero
 	height := ctx.BlockHeight()
 	ctx = ctx.WithBlockHeight(0)
 
 	// reinitialize all validators
-	err = app.StakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
+	err = app.StakingKeeper.IterateValidators(ctx, func(_ int64, val sdk.ValidatorI) (stop bool) {
 		valBz, err := sdk.ValAddressFromBech32(val.GetOperator())
 		if err != nil {
 			panic(err)
@@ -185,21 +175,6 @@ func (app *SimApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []
 		panic(err)
 	}
 
-	// iterate through unbonding delegations, reset creation height
-	err = app.StakingKeeper.IterateUnbondingDelegations(ctx, func(_ int64, ubd stakingtypes.UnbondingDelegation) (stop bool) {
-		for i := range ubd.Entries {
-			ubd.Entries[i].CreationHeight = 0
-		}
-		err = app.StakingKeeper.SetUnbondingDelegation(ctx, ubd)
-		if err != nil {
-			panic(err)
-		}
-		return false
-	})
-	if err != nil {
-		panic(err)
-	}
-
 	// Iterate through validators by power descending, reset bond heights, and
 	// update bond intra-tx counters.
 	store := ctx.KVStore(app.keys[stakingtypes.StoreKey])
@@ -228,24 +203,6 @@ func (app *SimApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []
 	iter.Close()
 
 	_, err = app.StakingKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	/* Handle slashing state. */
-
-	// reset start height on signing infos
-	err = app.SlashingKeeper.IterateValidatorSigningInfos(
-		ctx,
-		func(addr sdk.ConsAddress, info slashingtypes.ValidatorSigningInfo) (stop bool) {
-			info.StartHeight = 0
-			err = app.SlashingKeeper.SetValidatorSigningInfo(ctx, addr, info)
-			if err != nil {
-				panic(err)
-			}
-			return false
-		},
-	)
 	if err != nil {
 		log.Fatal(err)
 	}
