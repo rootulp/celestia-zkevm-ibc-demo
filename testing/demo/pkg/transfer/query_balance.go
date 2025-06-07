@@ -87,6 +87,7 @@ func getEvmUserBalance() (math.Int, error) {
 
 	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
 	ibcERC20Address, _ := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
+	fmt.Printf("ibcERC20Address: %v\n", ibcERC20Address)
 	if ibcERC20Address == (ethcommon.Address{}) {
 		fmt.Printf("IBCErc20 contract has not been deployed for the specified denom: %s\n", denomOnEthereum.Path())
 		return math.NewInt(0), nil
@@ -124,6 +125,7 @@ func getEvmUserBalance() (math.Int, error) {
 		return math.NewInt(0), fmt.Errorf("full denom on Ethereum does not match expected full denom: %s != %s", actualFullDenom, denomOnEthereum.Path())
 	}
 
+	fmt.Printf("receiver: %v\n", receiver)
 	userBalance, err := ibcERC20.BalanceOf(nil, ethcommon.HexToAddress(receiver))
 	if err != nil {
 		return math.NewInt(0), fmt.Errorf("failed to get user balance on Ethereum: %w", err)
